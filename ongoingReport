@@ -1,0 +1,652 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Allow the created content to be interactivelly ploted inline\n",
+    "%matplotlib inline\n",
+    "#Establish width and height for all plots in the report\n",
+    "#pylab.rcParams['figure.figsize'] = (18, 6) #width, height"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Import needed libraries\n",
+    "import os\n",
+    "from os.path import join, getsize\n",
+    "import pandas as pd\n",
+    "import matplotlib.pyplot as plt\n",
+    "from IPython.display import display\n",
+    "#the next cell enables plotting tables without borders"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "%%html\n",
+    "<style>\n",
+    "table,td,tr,th {border:none!important}\n",
+    "</style>"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Summary report of the CO2MPAS WLTP to NEDC CO$_2$ emission simulation model"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Complete path to the CO2MPAS summary file used in this report:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Search for CO2MPAS summary output files in given path and read the data from the SUMMARY tab into a dataFrame\n",
+    "for root, dirs, files in os.walk('C:/Users/valvevi/Desktop/DataToReport'):      \n",
+    "    for f in files:\n",
+    "        if 'summary' in f:\n",
+    "            file=str(os.path.join(root, f))\n",
+    "            print(file)\n",
+    "        else:\n",
+    "            None           \n",
+    "xl = pd.ExcelFile(file)\n",
+    "df=xl.parse(sheetname='SUMMARY') #Select the tab with the SUMMARY"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Gather and name the basic variables used in the report according to their name in the CO2MPAS output file\n",
+    "NEDC = df['NEDC co2_emission_value']\n",
+    "NEDCt = df['target NEDC co2_emission_value']\n",
+    "dNEDC = NEDC-NEDCt\n",
+    "UDC = df['NEDC phases_co2_emissions 0']\n",
+    "UDCt = df['target NEDC phases_co2_emissions 0']\n",
+    "dUDC = UDC - UDCt\n",
+    "EUDC = df['NEDC phases_co2_emissions 1']\n",
+    "EUDCt = df['target NEDC phases_co2_emissions 1']\n",
+    "dEUDC = EUDC - EUDCt\n",
+    "#Create a dataframe with this data\n",
+    "valuesDF = pd.DataFrame({'NEDC': NEDC,'NEDCt':NEDCt, 'dNEDC':dNEDC,'UDC': UDC,'UDCt':UDCt, 'dUDC':dUDC,'EUDC': EUDC,'EUDCt':EUDCt, 'dEUDC':dEUDC})                 "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Section 1. Performance of the model. All vehicles and test cases."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Error statistics for NEDC CO$_2$ emission"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Create a dataframe with the NECD, UDC, EUDC error statistics\n",
+    "errorsDF = pd.DataFrame(index=['Averages','Median', 'StdDev'], columns=['NEDC [gCO$_2$ km$^{-1}$]','UDC [gCO$_2$ km$^{-1}$]', 'EUDC [gCO$_2$ km$^{-1}$]'])\n",
+    "errorsDF.loc['Averages'] = pd.Series({'NEDC [gCO$_2$ km$^{-1}$]':round(valuesDF.dNEDC.mean(),2), 'UDC [gCO$_2$ km$^{-1}$]':round(valuesDF.dUDC.mean(),2), 'EUDC [gCO$_2$ km$^{-1}$]':round(valuesDF.dEUDC.mean(),2)})\n",
+    "errorsDF.loc['Median'] = pd.Series({'NEDC [gCO$_2$ km$^{-1}$]':round(valuesDF.dNEDC.median(),2), 'UDC [gCO$_2$ km$^{-1}$]':round(valuesDF.dUDC.median(),2), 'EUDC [gCO$_2$ km$^{-1}$]':round(valuesDF.dEUDC.median(),2)})\n",
+    "errorsDF.loc['StdDev'] = pd.Series({'NEDC [gCO$_2$ km$^{-1}$]':round(valuesDF.dNEDC.std(),2), 'UDC [gCO$_2$ km$^{-1}$]':round(valuesDF.dUDC.std(),2), 'EUDC [gCO$_2$ km$^{-1}$]':round(valuesDF.dEUDC.std(),2)})\n",
+    "errorsDF"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Error statistics for NEDC CO$_2$ emission applying a filtering of absolute error < 25 gCO$_2$ km$^{-1}$"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Removed cases and associated error of CO$_2$ emission for NEDC"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#list of filtered cases\n",
+    "fcases = valuesDF[abs(valuesDF.dNEDC) > 25]\n",
+    "fcases2 = pd.DataFrame({'Absolute error gCO$_2$ km$^{-1}$':fcases.dNEDC})\n",
+    "print((len(fcases.dNEDC)),'cases with an absolute NEDC 'u'CO\\u2082 emission error above 25 g'u'CO\\u2082/km')\n",
+    "fcases2.columns.name='# case'\n",
+    "fcases2\n",
+    "if (valuesDF.NEDC.count()-valuesDF.NEDCt.count()) != 0:\n",
+    "    print('NOTE:',valuesDF.NEDC.count(),'NEDC 'u'CO\\u2082 values provided and',valuesDF.NEDCt.count(),'target NEDC 'u'CO\\u2082 values provided')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Error statistics for NEDC CO$_2$ emission (filtered)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Create a dataframe with the FILETERED NECD, UDC, EUDC error statistics\n",
+    "#removing the cases where the absolute error for NEDC is larger than 25gCO2/km\n",
+    "fvaluesDF = valuesDF[abs(valuesDF.dNEDC) < 25]\n",
+    "ferrorsDF = pd.DataFrame(index=['Averages','Median', 'StdDev'], columns=['NEDC [gCO$_2$ km$^{-1}$]','UDC [gCO$_2$ km$^{-1}$]', 'EUDC [gCO$_2$ km$^{-1}$]'])\n",
+    "ferrorsDF.loc['Averages'] = pd.Series({'NEDC [gCO$_2$ km$^{-1}$]':round(fvaluesDF.dNEDC.mean(),2), 'UDC [gCO$_2$ km$^{-1}$]':round(fvaluesDF.dUDC.mean(),2), 'EUDC [gCO$_2$ km$^{-1}$]':round(fvaluesDF.dEUDC.mean(),2)})\n",
+    "ferrorsDF.loc['Median'] = pd.Series({'NEDC [gCO$_2$ km$^{-1}$]':round(fvaluesDF.dNEDC.median(),2), 'UDC [gCO$_2$ km$^{-1}$]':round(fvaluesDF.dUDC.median(),2), 'EUDC [gCO$_2$ km$^{-1}$]':round(fvaluesDF.dEUDC.median(),2)})\n",
+    "ferrorsDF.loc['StdDev'] = pd.Series({'NEDC [gCO$_2$ km$^{-1}$]':round(fvaluesDF.dNEDC.std(),2), 'UDC [gCO$_2$ km$^{-1}$]':round(fvaluesDF.dUDC.std(),2), 'EUDC [gCO$_2$ km$^{-1}$]':round(fvaluesDF.dEUDC.std(),2)})\n",
+    "ferrorsDF"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Distribution of the NEDC, UDC and EUDC errors for filtered cases"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#NEDC\n",
+    "# Create a figure instance\n",
+    "fig = plt.figure(1, figsize=(14, 6))\n",
+    "# Create an axes instance\n",
+    "ax = fig.add_subplot(111)\n",
+    "NEDC_hist = fvaluesDF.dNEDC.hist(bins=25, color='blue')\n",
+    "NEDC_hist.set_xlabel(\"NEDC error [gCO$_2$ km$^{-1}$]\",fontsize=14)\n",
+    "NEDC_hist.set_ylabel(\"frequency\",fontsize=14)\n",
+    "plt.title('NEDC CO$_2$ emission error distribution', fontsize=20)\n",
+    "plt.ylabel(\"frequency\",fontsize=18)\n",
+    "plt.tick_params(axis='x', which='major', labelsize=16)\n",
+    "plt.tick_params(axis='y', which='major', labelsize=16)\n",
+    "ax.get_xaxis().tick_bottom()\n",
+    "ax.get_yaxis().tick_left()\n",
+    "ax.set_xlim(-20, 20)\n",
+    "plt.show()\n",
+    "#UDC\n",
+    "fig = plt.figure(1, figsize=(14, 6))\n",
+    "ax = fig.add_subplot(111)\n",
+    "UDC_hist = fvaluesDF.dUDC.hist(bins=25, color='green') \n",
+    "UDC_hist.set_xlabel(\"UDC error [gCO$_2$ km$^{-1}$]\",fontsize=14)\n",
+    "UDC_hist.set_ylabel(\"frequency\",fontsize=14)\n",
+    "plt.title('UDC CO$_2$ emission error distribution', fontsize=20)\n",
+    "plt.ylabel(\"frequency\",fontsize=18)\n",
+    "plt.tick_params(axis='x', which='major', labelsize=16)\n",
+    "plt.tick_params(axis='y', which='major', labelsize=16)\n",
+    "ax.get_xaxis().tick_bottom()\n",
+    "ax.get_yaxis().tick_left()\n",
+    "ax.set_xlim(-20, 20)\n",
+    "plt.show()\n",
+    "#EUDC\n",
+    "fig = plt.figure(1, figsize=(14, 6))\n",
+    "ax = fig.add_subplot(111)\n",
+    "EUDC_hist = fvaluesDF.dEUDC.hist(bins=25, color='red') \n",
+    "EUDC_hist.set_xlabel(\"EUDC error [gCO$_2$ km$^{-1}$]\",fontsize=14)\n",
+    "EUDC_hist.set_ylabel(\"frequency\",fontsize=14)\n",
+    "plt.title('EUDC CO$_2$ emission error distribution', fontsize=20)\n",
+    "plt.ylabel(\"frequency\",fontsize=18)\n",
+    "plt.tick_params(axis='x', which='major', labelsize=16)\n",
+    "plt.tick_params(axis='y', which='major', labelsize=16)\n",
+    "ax.get_xaxis().tick_bottom()\n",
+    "ax.get_yaxis().tick_left()\n",
+    "ax.set_xlim(-20, 20)\n",
+    "plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Comparative emission error per driving cycle (gCO$_2$ km$^{-1}$)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Alternatively show boxplots\n",
+    "toboxplot = [fvaluesDF.dNEDC,fvaluesDF.dUDC,fvaluesDF.dEUDC]\n",
+    "# Create a figure instance\n",
+    "fig = plt.figure(1, figsize=(10, 6))\n",
+    "# Create an axes instance\n",
+    "ax = fig.add_subplot(111)\n",
+    "# Create the boxplot with fill color\n",
+    "bp = ax.boxplot(toboxplot, sym='', patch_artist=True, whis=10000, showmeans=True, meanprops=(dict(marker='o',markerfacecolor='yellow')))\n",
+    "for box in bp['boxes']:\n",
+    "    # change outline color\n",
+    "    box.set( color='black', linewidth=1)\n",
+    "    # change fill color\n",
+    "    box.set( facecolor = '#b78adf' )\n",
+    "## Custom x-axis labels\n",
+    "ax.set_xticklabels(['NEDC', 'UDC', 'EUDC'],fontsize=20)\n",
+    "## Remove top axes and right axes ticks\n",
+    "ax.get_xaxis().tick_bottom()\n",
+    "ax.get_yaxis().tick_left()\n",
+    "#Set y axis title\n",
+    "plt.title('CO$_2$ emission error by driving cycle', fontsize=20)\n",
+    "plt.ylabel(\"CO$_2$ emission error [gCO$_2$ km$^{-1}$]\",fontsize=18)\n",
+    "plt.tick_params(axis='y', which='major', labelsize=16)\n",
+    "ax.set_ylim(-20, 20)\n",
+    "plt.show()\n",
+    "print('The purple box represents the 1st and 3rd quartile.\\nThe red line is the median.\\nThe yellow dot is the mean.\\nthe whiskers show the min and max values.')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Error statistics for engine parameters"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Gather and name the engine parameters used in the report according to their name in the CO2MPAS output file\n",
+    "param_a = df['co2_params a']\n",
+    "param_a2 = df['co2_params a2']\n",
+    "param_b = df['co2_params b']\n",
+    "param_c = df['co2_params c']\n",
+    "param_l = df['co2_params l']\n",
+    "param_l2 = df['co2_params l2']\n",
+    "param_t = df['co2_params t']\n",
+    "param_trg = df['co2_params trg']\n",
+    "#Create a dataframe with this data\n",
+    "paramsDF = pd.DataFrame({'param a': param_a,'param a2':param_a2, 'param b':param_b,'param c': param_c,'param l':param_l, 'param l2':param_l2,'param t': param_t,'param trg':param_trg})                 \n",
+    "#print the basic automatic statistics\n",
+    "#paramsDF.describe()\n",
+    "paramsDFstat = pd.DataFrame(index=['Averages','Median', 'StdDev'], columns=['param a','param a2', 'param b', 'param l', 'param l2', 'param t', 'param trg'])\n",
+    "paramsDFstat.loc['Averages'] = pd.Series({'param a':round(paramsDF['param a'].mean(),3), 'param a2':round(paramsDF['param a2'].mean(),3), 'param b':round(paramsDF['param b'].mean(),3),'param l':round(paramsDF['param l'].mean(),3),'param l2':round(paramsDF['param l2'].mean(),3),'param t':round(paramsDF['param t'].mean(),3),'param trg':round(paramsDF['param trg'].mean(),3)})\n",
+    "paramsDFstat.loc['Median'] = pd.Series({'param a':round(paramsDF['param a'].median(),3), 'param a2':round(paramsDF['param a2'].median(),3), 'param b':round(paramsDF['param b'].median(),3),'param l':round(paramsDF['param l'].median(),3),'param l2':round(paramsDF['param l2'].median(),3),'param t':round(paramsDF['param t'].median(),3),'param trg':round(paramsDF['param trg'].median(),3)})\n",
+    "paramsDFstat.loc['StdDev'] = pd.Series({'param a':round(paramsDF['param a'].std(),3), 'param a2':round(paramsDF['param a2'].std(),3), 'param b':round(paramsDF['param b'].std(),3),'param l':round(paramsDF['param l'].std(),3),'param l2':round(paramsDF['param l2'].std(),3),'param t':round(paramsDF['param t'].std(),3),'param trg':round(paramsDF['param trg'].std(),3)})\n",
+    "paramsDFstat"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Error statistics for engine parameters applying a filtering of NEDC absolute error < 25 gCO$_2$ km$^{-1}$"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#append to the dataframe with the engine parameters the NEDC error\n",
+    "paramsDF['NEDC error'] = dNEDC\n",
+    "#filter for absolute errors above 25g CO2 per km\n",
+    "fparamsDF = paramsDF[abs(paramsDF['NEDC error']) < 25]\n",
+    "fparamsDFstat = pd.DataFrame(index=['Averages','Median', 'StdDev'], columns=['param a','param a2', 'param b', 'param l', 'param l2', 'param t', 'param trg'])\n",
+    "fparamsDFstat.loc['Averages'] = pd.Series({'param a':round(fparamsDF['param a'].mean(),3), 'param a2':round(fparamsDF['param a2'].mean(),3), 'param b':round(fparamsDF['param b'].mean(),3),'param l':round(fparamsDF['param l'].mean(),3),'param l2':round(fparamsDF['param l2'].mean(),3),'param t':round(fparamsDF['param t'].mean(),3),'param trg':round(fparamsDF['param trg'].mean(),3)})\n",
+    "fparamsDFstat.loc['Median'] = pd.Series({'param a':round(fparamsDF['param a'].median(),3), 'param a2':round(fparamsDF['param a2'].median(),3), 'param b':round(fparamsDF['param b'].median(),3),'param l':round(fparamsDF['param l'].median(),3),'param l2':round(fparamsDF['param l2'].median(),3),'param t':round(fparamsDF['param t'].median(),3),'param trg':round(fparamsDF['param trg'].median(),3)})\n",
+    "fparamsDFstat.loc['StdDev'] = pd.Series({'param a':round(fparamsDF['param a'].std(),3), 'param a2':round(fparamsDF['param a2'].std(),3), 'param b':round(fparamsDF['param b'].std(),3),'param l':round(fparamsDF['param l'].std(),3),'param l2':round(fparamsDF['param l2'].std(),3),'param t':round(fparamsDF['param t'].std(),3),'param trg':round(fparamsDF['param trg'].std(),3)})\n",
+    "fparamsDFstat"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Distribution of the engine parameters values for filtered cases"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Histogram for each engine parameter\n",
+    "#create a list with all the available engine parameters\n",
+    "paramlist = list(fparamsDF.columns.unique())\n",
+    "for p in range(0,(len(paramlist)-1)):\n",
+    "    tit = paramlist[p] + ' distribution'\n",
+    "    fig = plt.figure(1, figsize=(14, 7))\n",
+    "    plt.title(tit,fontsize=20)\n",
+    "    plot = fig.add_subplot(111)\n",
+    "    # We change the fontsize of minor ticks label \n",
+    "    plot.tick_params(axis='x', which='major', labelsize=16)\n",
+    "    plot.tick_params(axis='y', which='major', labelsize=16)\n",
+    "    par_hist = fparamsDF[paramlist[p]].hist(bins=25, color='grey')\n",
+    "    par_hist.set_xlabel(paramlist[p],fontsize=20)\n",
+    "    par_hist.set_ylabel(\"frequency\",fontsize=20)\n",
+    "    plot.get_xaxis().tick_bottom()\n",
+    "    plot.get_yaxis().tick_left()\n",
+    "    plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Section 2. Performance of the model. Statistics per vehicle model and case test."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Glossary of vehicle models and number of test cases considered in the report"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "cases = df['Case']\n",
+    "model = df['model']\n",
+    "#Create a dataframe with the NECD, UDC, EUDC and vehicle model and case\n",
+    "CarMod = pd.DataFrame({'dNEDC':dNEDC,'dUDC':dUDC,'dEUDC':dEUDC,'Model code':model,'Case':cases})         \n",
+    "#filter for absolute errors above 25g CO2 per km\n",
+    "mod_cases = CarMod[abs(CarMod.dNEDC) < 25]\n",
+    "# mod_cases = pd.DataFrame({'Model code':model,'# cases':cases})\n",
+    "mod_cases = mod_cases.groupby(['Model code'],as_index=False).count() \n",
+    "mod_cases['Brand and model'] = ['Peugeot 308','Fiat 500','Audi A4','Opel Astra','Alfa Romeo Giulietta','Volkswagen Polo','Fiat Punto','BMW X1','Opel Zafira']\n",
+    "cols = mod_cases.columns.tolist()\n",
+    "cols = cols[-1:] + cols[:2]\n",
+    "mod_cases = mod_cases[cols]\n",
+    "mod_cases"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "NEDC, UDC and EUDC CO$_2$ emission error per vehicle model (filtered for NEDC CO2 emission absolute error < 25 gCO$_2$ km$^{-1}$)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Create a dataframe with the NECD, UDC, EUDC and vehicle model and case\n",
+    "CarMod = pd.DataFrame({'dNEDC':dNEDC,'dUDC':dUDC,'dEUDC':dEUDC,'Model code':model,'Case':cases})         \n",
+    "#filter for absolute errors above 25g CO2 per km\n",
+    "CarMod = CarMod[abs(CarMod.dNEDC) < 25]\n",
+    "#in order to create statistic tables and plots for each model car, a numeric car ID 'cid' has to be assigned to each vehicle\n",
+    "Carlist = list(CarMod['Model code'].unique())\n",
+    "Cidlist = list(range(len(Carlist)))\n",
+    "CarMod.cid = CarMod['Model code'].replace(Carlist, Cidlist, regex = True)\n",
+    "CarMod['cod'] = CarMod.cid\n",
+    "#Create a table with the error statistics for each car model\n",
+    "for x in range(0,len(Cidlist)):\n",
+    "    Car = CarMod[CarMod.cod == x]\n",
+    "    CarDF = pd.DataFrame(index=['Averages','Median', 'StdDev'], columns=['NEDC [gCO$_2$ km$^{-1}$]','UDC [gCO$_2$ km$^{-1}$]', 'EUDC [gCO$_2$ km$^{-1}$]'])\n",
+    "    CarDF.loc['Averages'] = pd.Series({'NEDC [gCO$_2$ km$^{-1}$]':round(Car.dNEDC.mean(),2), 'UDC [gCO$_2$ km$^{-1}$]':round(Car.dUDC.mean(),2), 'EUDC [gCO$_2$ km$^{-1}$]':round(Car.dEUDC.mean(),2)})\n",
+    "    CarDF.loc['Median'] = pd.Series({'NEDC [gCO$_2$ km$^{-1}$]':round(Car.dNEDC.median(),2), 'UDC [gCO$_2$ km$^{-1}$]':round(Car.dUDC.median(),2), 'EUDC [gCO$_2$ km$^{-1}$]':round(Car.dEUDC.median(),2)})\n",
+    "    CarDF.loc['StdDev'] = pd.Series({'NEDC [gCO$_2$ km$^{-1}$]':round(Car.dNEDC.std(),2), 'UDC [gCO$_2$ km$^{-1}$]':round(Car.dUDC.std(),2), 'EUDC [gCO$_2$ km$^{-1}$]':round(Car.dEUDC.std(),2)})\n",
+    "    CarDF.columns.name=Car.iat[0,1]\n",
+    "    display(CarDF)\n",
+    "    #plot the NEDC CO2 emission error histogram per vehicle model\n",
+    "    fig = plt.figure(1, figsize=(14, 7))\n",
+    "    plt.title(Car.iat[0,1],fontsize=20)\n",
+    "    plot = fig.add_subplot(111)\n",
+    "    plot.tick_params(axis='x', which='major', labelsize=14)\n",
+    "    plot.tick_params(axis='y', which='major', labelsize=14)\n",
+    "    plot.set_xlim(-15, 15)\n",
+    "    plot.get_xaxis().tick_bottom()\n",
+    "    plot.get_yaxis().tick_left()\n",
+    "    car_NEDC_hist = Car.dNEDC.hist(bins=25, color='blue')\n",
+    "    car_NEDC_hist.set_xlabel(\"NEDC CO$_2$ emission error [gCO$_2$ km$^{-1}$]\",fontsize=20)\n",
+    "    car_NEDC_hist.set_ylabel(\"frequency\",fontsize=20)\n",
+    "    plt.show()\n",
+    "    #plot the NEDC error per vehicle and for all cases\n",
+    "    fig = plt.figure(1, figsize=(14, 7))\n",
+    "    plt.title(Car.iat[0,1],fontsize=20)\n",
+    "    plot = fig.add_subplot(111)\n",
+    "    plot.tick_params(axis='x', which='major', labelsize=14)\n",
+    "    plot.tick_params(axis='y', which='major', labelsize=14)\n",
+    "    plot.set_xlim(0, len(Car.Case))\n",
+    "    plot.set_ylim(-15,15)\n",
+    "    plot.get_xaxis().tick_bottom()\n",
+    "    plot.get_yaxis().tick_left()\n",
+    "    car_scat = plt.scatter(Car.Case, Car.dNEDC, color='blue')\n",
+    "    plot.set_xlabel(\"Case #\",fontsize=20)\n",
+    "    plot.set_ylabel(\"NEDC error [gCO$_2$ km$^{-1}$]\",fontsize=20)\n",
+    "    line1 = plot.axhline(y=-2.5, color='grey', linestyle='-.', label='± 2.5 gCO$_2$ km$^{-1}$')\n",
+    "    line2 = plot.axhline(y=2.5, color='grey', linestyle='-.')\n",
+    "    line3 = plot.axhline(y=-4, color='black', linestyle='--', label='± 4.0 gCO$_2$ km$^{-1}$')\n",
+    "    line4 = plot.axhline(y=4, color='black', linestyle='--')\n",
+    "    plt.legend(handles=[line1, line3], loc = 3)\n",
+    "    plt.show()\n",
+    "    #plot the UDC CO2 emission error histogram per vehicle model\n",
+    "    fig = plt.figure(1, figsize=(14, 7))\n",
+    "    plt.title(Car.iat[0,1],fontsize=20)\n",
+    "    plot = fig.add_subplot(111)\n",
+    "    plot.tick_params(axis='x', which='major', labelsize=14)\n",
+    "    plot.tick_params(axis='y', which='major', labelsize=14)\n",
+    "    plot.set_xlim(-15, 15)\n",
+    "    plot.get_xaxis().tick_bottom()\n",
+    "    plot.get_yaxis().tick_left()\n",
+    "    car_UDC_hist = Car.dUDC.hist(bins=25, color='green')\n",
+    "    car_UDC_hist.set_xlabel(\"UDC CO$_2$ emission error [gCO$_2$ km$^{-1}$]\",fontsize=20)\n",
+    "    car_UDC_hist.set_ylabel(\"frequency\",fontsize=20)\n",
+    "    plt.show()\n",
+    "    #plot the UDC error per vehicle and for all cases\n",
+    "    fig = plt.figure(1, figsize=(14, 7))\n",
+    "    plt.title(Car.iat[0,1],fontsize=20)\n",
+    "    plot = fig.add_subplot(111)\n",
+    "    plot.tick_params(axis='x', which='major', labelsize=14)\n",
+    "    plot.tick_params(axis='y', which='major', labelsize=14)\n",
+    "    plot.set_xlim(0, len(Car.Case))\n",
+    "    plot.set_ylim(-15,15)\n",
+    "    plot.get_xaxis().tick_bottom()\n",
+    "    plot.get_yaxis().tick_left()\n",
+    "    car_scat = plt.scatter(Car.Case, Car.dUDC, color='green')\n",
+    "    plot.set_xlabel(\"Case #\",fontsize=20)\n",
+    "    plot.set_ylabel(\"UDC error [gCO$_2$ km$^{-1}$]\",fontsize=20)\n",
+    "    line1 = plot.axhline(y=-2.5, color='grey', linestyle='-.', label='± 2.5 gCO$_2$ km$^{-1}$')\n",
+    "    line2 = plot.axhline(y=2.5, color='grey', linestyle='-.')\n",
+    "    line3 = plot.axhline(y=-4, color='black', linestyle='--', label='± 4.0 gCO$_2$ km$^{-1}$')\n",
+    "    line4 = plot.axhline(y=4, color='black', linestyle='--')\n",
+    "    plt.legend(handles=[line1, line3], loc = 3)\n",
+    "    plt.show()\n",
+    "    #plot the EUDC CO2 emission error histogram per vehicle model\n",
+    "    fig = plt.figure(1, figsize=(14, 7))\n",
+    "    plt.title(Car.iat[0,1],fontsize=20)\n",
+    "    plot = fig.add_subplot(111)\n",
+    "    plot.tick_params(axis='x', which='major', labelsize=14)\n",
+    "    plot.tick_params(axis='y', which='major', labelsize=14)\n",
+    "    plot.set_xlim(-15, 15)\n",
+    "    plot.get_xaxis().tick_bottom()\n",
+    "    plot.get_yaxis().tick_left()\n",
+    "    car_EUDC_hist = Car.dEUDC.hist(bins=25, color='red')\n",
+    "    car_EUDC_hist.set_xlabel(\"EUDC CO$_2$ emission error [gCO$_2$ km$^{-1}$]\",fontsize=20)\n",
+    "    car_EUDC_hist.set_ylabel(\"frequency\",fontsize=20)\n",
+    "    plt.show()\n",
+    "    #plot the EUDC error per vehicle and for all cases\n",
+    "    fig = plt.figure(1, figsize=(14, 7))\n",
+    "    plt.title(Car.iat[0,1],fontsize=20)\n",
+    "    plot = fig.add_subplot(111)\n",
+    "    plot.tick_params(axis='x', which='major', labelsize=14)\n",
+    "    plot.tick_params(axis='y', which='major', labelsize=14)\n",
+    "    plot.set_xlim(0, len(Car.Case))\n",
+    "    plot.set_ylim(-15,15)\n",
+    "    plot.get_xaxis().tick_bottom()\n",
+    "    plot.get_yaxis().tick_left()\n",
+    "    car_scat = plt.scatter(Car.Case, Car.dEUDC, color='red')\n",
+    "    plot.set_xlabel(\"Case #\",fontsize=20)\n",
+    "    plot.set_ylabel(\"EUDC error [gCO$_2$ km$^{-1}$]\",fontsize=20)\n",
+    "    line1 = plot.axhline(y=-2.5, color='grey', linestyle='-.', label='± 2.5 gCO$_2$ km$^{-1}$')\n",
+    "    line2 = plot.axhline(y=2.5, color='grey', linestyle='-.')\n",
+    "    line3 = plot.axhline(y=-4, color='black', linestyle='--', label='± 4.0 gCO$_2$ km$^{-1}$')\n",
+    "    line4 = plot.axhline(y=4, color='black', linestyle='--')\n",
+    "    plt.legend(handles=[line1, line3], loc = 3)\n",
+    "    plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "NEDC error vs engine parameters per vehicle model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Create a dataframe with the engine parameters, the model of the vehicle and the NEDC error for filtering\n",
+    "parCarDF = paramsDF\n",
+    "parCarDF['carmodel'] = model\n",
+    "# parCarDF['carid'] = CarMod.cod\n",
+    "parCarDF\n",
+    "fparCarDF = parCarDF[parCarDF['NEDC error'] < 25]\n",
+    "groups = fparCarDF.groupby('carmodel')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#Plotting the filtered NEDC error vs engine parameters for each vehicle model\n",
+    "#define colors por each kind of car\n",
+    "for p in range(0,(len(paramlist)-1)):\n",
+    "    fig = plt.figure(1, figsize=(14, 7))\n",
+    "    plot = fig.add_subplot(111)\n",
+    "    plot.margins(0.05)\n",
+    "    for name, group in groups:\n",
+    "        plot.plot(group[paramlist[p]], group['NEDC error'], marker='o', linestyle='', ms=6, label=name)\n",
+    "        plot.tick_params(axis='x', which='major', labelsize=14)\n",
+    "        plot.tick_params(axis='y', which='major', labelsize=14)\n",
+    "        plot.set_ylim(-15,15)\n",
+    "        plot.get_xaxis().tick_bottom()\n",
+    "        plot.get_yaxis().tick_left()\n",
+    "    plot.legend(numpoints=1, bbox_to_anchor=(1.01, 1), loc=2, borderaxespad=0.)\n",
+    "    plot.set_xlabel(paramlist[p],fontsize=20)\n",
+    "    plot.set_ylabel(\"NEDC error [gCO$_2$ km$^{-1}$]\",fontsize=20)\n",
+    "    plt.show()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Engine parameters vs Engine parameters. All vehicles"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#plot engine parameters ones against the others\n",
+    "from pandas.tools.plotting import scatter_matrix\n",
+    "fparDF = fparCarDF.drop('NEDC error', 1)\n",
+    "parscat = scatter_matrix(fparDF,figsize=[16,16],marker='o',c='grey', alpha=0.5, diagonal='kde')\n",
+    "plt.show()"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.5.0"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 0
+}
